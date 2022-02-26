@@ -71,6 +71,7 @@ class Conv_pt(nn.Module):
         return self.act(self.conv_pt(x))
 
 
+
 class SubConv2d(nn.Conv2d):
     # Standard convolution        Conv(c1 * 4, c2, k, s, p, g, act)
 
@@ -104,8 +105,6 @@ class SubConv2d(nn.Conv2d):
             out = torch.zeros(x.shape[0], self.FilterSkeleton.shape[0], int(np.ceil(x.shape[2] / self.stride[0])), int(np.ceil(x.shape[3] / self.stride[1])))
             if x.is_cuda:
                 out = out.cuda()
-            print('x', x.shape)
-            print('self.weight', self.weight.shape)
             x = F.conv2d(x, self.weight) #x.float()
             l, h = 0, 0
             for i in range(self.BrokenTarget.shape[0]):
@@ -154,15 +153,19 @@ class SubConv2d(nn.Conv2d):
 
     def prune_out(self, threshold):
         # sum(dim=(1, 2)) 同一filter内所有channel相加，形成一个channel, 然后在该channel内所有行相加; 剩下的是（filters, channel(1), row(3), coloum(1）)
-        # 简单说，就是FS每个channel代表weight里的每个fitler, 那么比如说FS是一个(2,3,3)的矩阵，那么这个式子最后得到的[True, False], 说明weight对应的有一个filter被彻底删除了。 
         out_mask = (self.FilterSkeleton.abs() > threshold).sum(dim=(1, 2)) != 0
+        print('weight.shape----01', self.weight.shape)
         self.weight = Parameter(self.weight[out_mask])
+        print('weight.shape----02', self.weight.shape)
+
         self.FilterSkeleton = Parameter(self.FilterSkeleton[out_mask], requires_grad=True)
         self.out_channels = out_mask.sum().item()
         return out_mask
 
+
+
     def _break(self, threshold):
-        # 这里的weight和FS相乘,是对应了论文中FS 和 weight的点乘, 因为这两个在更新时都是单独更新的, 所以论文里需要他们进行点乘, 这一步是在这里进行了实现. 使得模型weight真正的被稀疏，因为训练时两者的相乘是一种伪稀疏
+        # 这里的weight和FS相乘,是对应了论文中FS 和 weight的点乘, 因为这两个在更新时都是单独更新的, 所以论文里需要他们进行点乘, 这一步是在这里进行了实现. 
         self.weight = Parameter(self.weight * self.FilterSkeleton.unsqueeze(1)) #a.squeeze(N) 就是在a中指定位置N加上一个维数为1的维度。。a.squeeze(N) 就是在a中指定位置N加上一个维数为1的维度。
         self.FilterSkeleton = Parameter((self.FilterSkeleton.abs() > threshold), requires_grad=False)
         #如果没有值小于threshold, 即不需要剪枝,则把三个维度的所有值都设为True(这个功能优待测试)
@@ -172,11 +175,12 @@ class SubConv2d(nn.Conv2d):
         # 这里如果没有剪枝,就不给BrokenTarget 赋值,从而不用在forward的if BrokenTarget 里跑,这样就尽可能提高准确率
 
         self.out_channels = self.FilterSkeleton.sum().item()
-        self.BrokenTarget = self.FilterSkeleton.sum(dim=0)
-        self.kernel_size = (1, 1)
- 
-        self.weight = Parameter(self.weight.permute(2, 3, 0, 1).reshape(-1, self.in_channels, 1, 1)[self.FilterSkeleton.permute(1, 2, 0).reshape(-1)])
 
+        self.BrokenTarget = self.FilterSkeleton.sum(dim=0)
+
+        self.kernel_size = (1, 1)
+        
+        self.weight = Parameter(self.weight.permute(2, 3, 0, 1).reshape(-1, self.in_channels, 1, 1)[self.FilterSkeleton.permute(1, 2, 0).reshape(-1)])
 
     def update_skeleton(self, sr, threshold, key):
         FS_grad = copy.deepcopy(self.FilterSkeleton.grad.data)
@@ -194,7 +198,6 @@ class SubConv2d(nn.Conv2d):
         self.FilterSkeleton.grad.data.mul_(mask)        # 这里是FS的gradient和 mask 对应位置相乘
         # remove kernel size dimention, only channel left.
         # 把所有FS中为0的stripe消掉
-        # 这里是为bn 层的简直做mask, 通过这一步，把fs 的至幻化成1×1的形状与bn相同的模板
         out_mask = mask.sum(dim=(1, 2)) != 0
         return out_mask, FS_grad
 
@@ -211,9 +214,7 @@ class SubConv2d(nn.Conv2d):
         self.FilterSkeleton.data.mul_(mask)   
 
         self.FilterSkeleton.grad.data.mul_(mask)        # 这里是FS的gradient和 mask 对应位置相乘
-        # 查看是否有FS里把所有channel里所有stripe都被剪掉，如果有，那么整个channel 对应fitler 都为false；
-        # 因为一个bn 对应着一个filter, 因此就对应了FS的一个channel, 因此如果某个FS的channel被彻底裁剪掉，那么它对应的bn也要被裁剪，所以这里输出的out_mask 是为了裁剪bn使用
-        # 自己运行：y = torch.randn(2,3,3)； n = y.abs() > 0.5； out = n.sum(dim=(1,2)) != 0 救知道了
+
         out_mask = mask.sum(dim=(1, 2)) != 0
 
         return out_mask, FS_grad
