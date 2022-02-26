@@ -13,8 +13,8 @@
 train: ./data/VOC/images/train/   # 16551 images
 val: ./data/VOC/images/val/  # 4952 images
 test: ./data/VOC/images/val/  
+# number of classes
+nc: 20
 
-# Classes
-nc: 20  # number of classes
-names: ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog',
-        'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']  # class names
+# class names
+names: ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']
