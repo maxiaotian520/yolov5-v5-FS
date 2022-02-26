@@ -1,5 +1,5 @@
 # !git clone https://github.com/maxiaotian520/yolov5_v5-FS.git  # clone repo
-# 克隆自己的github项目，方法是在自己的github地址前面加上用户名+密钥@github.com---, 这个密钥我创建的是永久不过期的，参考
+# 克隆自己的private github项目，方法是在自己的github地址前面加上用户名+密钥@github.com---, 这个密钥我创建的是永久不过期的，参考
 # From your GitHub account, go to Settings => Developer Settings => Personal Access Token => Generate New Token (Give your password) => 
 # Fillup the form => click Generate token => Copy the generated Token, it will be something like ghp_sFhFsSHhTzMDreGRLjmks4Tzuzgthdvfsrta
 !git clone https://maxiaotian520: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@github.com/maxiaotian520/yolov5_v5-FS.git

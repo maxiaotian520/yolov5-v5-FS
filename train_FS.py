@@ -193,8 +193,11 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             ema.ema.load_state_dict(ckpt['ema'].float().state_dict())
             ema.updates = ckpt['updates']
 
+        #print(ckpt['epoch'])
         # Epochs
         start_epoch = ckpt['epoch'] + 1
+        #print(start_epoch)
+        #start_epoch = 221
         if resume:
             assert start_epoch > 0, f'{weights} training to {epochs} epochs is finished, nothing to resume.'
         if epochs < start_epoch:
@@ -404,30 +407,30 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                                            compute_loss=compute_loss)
 
             #print('----------results', results, results[2])
-            
-            if index % 5 == 0:
-                m_old = m_new
-                m_new = results[2]
+            ######################################################自己设置的自动早停，防止不断出现的准确率下跌问题。################################
+            # if index % 5 == 0:
+            #     m_old = m_new
+            #     m_new = results[2]
 
-            if index % 5 == 3:
-                m_old_03 = m_new_03
-                m_new_03 = results[2]
+            # if index % 5 == 3:
+            #     m_old_03 = m_new_03
+            #     m_new_03 = results[2]
 
-            if index % 5 == 1:
-                m_old_01 = m_new_01
-                m_new_01 = results[2]
+            # if index % 5 == 1:
+            #     m_old_01 = m_new_01
+            #     m_new_01 = results[2]
 
-            if epoch > 170: 
-                if m_new - m_old < 0:
-                    if m_new_03 - m_old_03 < 0:
-                        if m_new_01 - m_old_01 < 0:
-                            break
+            # if epoch > 170: 
+            #     if m_new - m_old < 0:
+            #         if m_new_03 - m_old_03 < 0:
+            #             if m_new_01 - m_old_01 < 0:
+            #                 break
+            # index += 1
 
-            index += 1
+
+
 
             # opt.sr = lr[2] * 10
-
-
             # Update best mAP
             fi = fitness(np.array(results).reshape(1, -1))  # weighted combination of [P, R, mAP@.5, mAP@.5-.95]
             if fi > best_fitness:
@@ -452,7 +455,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 del ckpt
                 callbacks.on_model_save(last, epoch, final_epoch, best_fitness, fi)
 
-            # Stop Single-GPU 关闭自动早停止
+            ############################################# Stop Single-GPU 关闭官方给的自动早停，就是当准确率出现连续下降时，就自动停止训练################################
             # if stopper(epoch=epoch, fitness=fi):
             #     break
 
@@ -501,11 +504,11 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 def parse_opt(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='yolov5s.pt', help='initial weights path')
-    parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
-    parser.add_argument('--data', type=str, default='data/coco128.yaml', help='dataset.yaml path')
+    parser.add_argument('--cfg', type=str, default='yolov5s.yaml', help='model.yaml path')
+    parser.add_argument('--data', type=str, default='data/coco.yaml', help='dataset.yaml path')
     parser.add_argument('--hyp', type=str, default='data/hyps/hyp.scratch.yaml', help='hyperparameters path')
     parser.add_argument('--epochs', type=int, default=300)
-    parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
+    parser.add_argument('--batch-size', type=int, default=112, help='total batch size for all GPUs')
     parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=640, help='train, val image size (pixels)')
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
@@ -537,13 +540,14 @@ def parse_opt(known=False):
     parser.add_argument('--freeze', type=int, default=0, help='Number of layers to freeze. backbone=10, all=24')
     parser.add_argument('--patience', type=int, default=30, help='EarlyStopping patience (epochs)')
     #-------------------------------------------------------------------------------------------------------------------------
-    parser.add_argument('--sr', type=float)
-    parser.add_argument('--threshold', type=float)
+    parser.add_argument('--sr', default=0.99, type=float)
+    parser.add_argument('--threshold', default=0.01, type=float)
     parser.add_argument('--follow', default=True)
     parser.add_argument('--Elastic_Net', default=None)
     parser.add_argument('--scenario', default=False, help='doing base scenario before evolve')
     parser.add_argument('--Mobilenet', default=None)
     #-------------------------------------------------------------------------------------------------------------------------
+    #parser.parse_args(['--data', 'voc.yaml', '--cfg', 'yolov5s_test.yaml',  '--batch-size', 80, '--sr', 0.99, '--threshold', 0.8, '--epochs', 1])
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
     return opt
 

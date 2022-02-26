@@ -333,7 +333,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 f"Logging results to {colorstr('bold', save_dir)}\n"
                 f'Starting training for {epochs} epochs...')
 
-
+    # print(model)
     #----------------------------------------------------------------------------------------------------------------------------
     # 画filter的l1 norm  论文中Figure 1 的右边图
     if opt.flag == 'figure_01':
@@ -354,6 +354,14 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     plt.savefig(path+k+'.png', dpi=100, pad_inches=0)
                     plt.imshow(filer[ :, :],cmap='Oranges')   # Blues  gray  
 
+                    #因为最后一个卷积核总是保存不上，就是最右下角的那个，因此再重新画一遍，后面的figure_07,08重复一边都是如此
+                    if i == 255:
+                        plt.subplot(16, 16, i+1)  
+                        plt.axis('off')
+                        plt.savefig(path+k+'.png', dpi=100, pad_inches=0)
+                        plt.imshow(filer[ :, :],cmap='Oranges')   # Blues  gray 
+
+
     # 话figure07 的图
     if opt.flag == 'figure_07':
         path = 'runs/graph/figure_07/'
@@ -365,7 +373,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 zero = torch.zeros_like(localFS)
                 one = torch.ones_like(localFS)
                 localFS = torch.where(localFS < opt.threshold, zero, one)
-                print(localFS)
+                #print(localFS.shape)
                 ### 四维np (filter数，channel数，kernel[0], kernel[1])中，在每个filter中沿着所有channel相加求平均值，即是论文中的average l1 norm of filters
                 # localw = np.mean(localw, axis = 1)
                 # print("total of number of filter : ", len(localw))
@@ -379,6 +387,84 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     plt.savefig(path+k+'_pruned.png', dpi=100, pad_inches=0)
                     plt.imshow(filer[ :, :],cmap='Oranges')   # Blues    Oranges
 
+                    if i == 255:
+                        plt.subplot(16, 16, i+1)  
+                        plt.axis('off')
+                        plt.savefig(path+k+'_pruned.png', dpi=100, pad_inches=0)
+                        plt.imshow(filer[ :, :],cmap='Oranges')   # Blues    Oranges 
+
+    # 话figure07 的图
+    if opt.flag == 'figure_08':
+        path = 'runs/graph/figure_08/'
+        index_orig = 2
+        plt.figure(tight_layout=True, figsize=(20, 17))
+        for k, v in model.named_modules():
+            # if k[-7:] == "conv_pt":
+            #     print(k)
+            # if k == 'model.5.conv_pt':    # 'model.0.conv.conv_pt'  'model.1.conv_pt'  'model.5.conv_pt'
+            if k[-7:] == "conv_pt":
+                print('---------------------------------')
+                # localw = v.weight.cpu().clone().detach().numpy()   
+                localFS = v.FilterSkeleton.cpu().clone().detach()  
+                zero = torch.zeros_like(localFS)
+                one = torch.ones_like(localFS)
+                localFS = torch.where(localFS < opt.threshold, zero, one)
+                #print(localFS)
+                ### 四维np (filter数，channel数，kernel[0], kernel[1])中，在每个filter中沿着所有channel相加求平均值，即是论文中的average l1 norm of filters
+                # localw = np.mean(localw, axis = 1)
+                # print("total of number of filter : ", len(localw))
+                # 遍历每个filter
+                
+                listFS, newListFS = [], []
+                for i, filer in enumerate(localFS):
+                    listFS.append((i,filer.sum().item()))
+                #print(listFS)
+                #print(listFS)
+                #nums = [1,5,4,2,8,7]
+
+                n = len(listFS)
+                for i in range(n):
+                    for j in range(i, n):
+                        if listFS[i][1] > listFS[j][1]:
+                            listFS[i], listFS[j] = listFS[j], listFS[i]
+                            
+                for c in listFS:
+                    #print(c[0])
+                    newListFS.append(c[0])
+                #pltloc = [0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224]
+
+                print('index_orig：', index_orig)
+                index = index_orig
+                prows = 21
+                
+                # if index_orig == 19:
+                #     prows += 1
+
+                for i in range(prows): #len(newListFS)    如果想在最后一行留白，就用prows-1
+                    # print(pltloc[i])
+                    # print(localFS[newListFS[i]][ :, :])
+                    # # plt.subplot 基于filter数，如果为256(model.5), 则用16*16, threshold 0.03; 如果是32(model.1), 可用6×6 th 0.02
+                    #plt.subplot(16, 16, pltloc[i]+1)  
+                    print('index', index)
+                    plt.subplot(prows, 20, index) 
+                    plt.axis('off')
+                    plt.savefig(path+'pruned_ranking.png', dpi=100, pad_inches=0)
+                    
+                    # if i == 20:
+                    #     plt.imshow('layer'+str(index))   # Blues    Oranges
+                    # else:
+                    plt.imshow(localFS[newListFS[i]][ :, :],cmap='Oranges')   # Blues    Oranges
+
+                    if index == 19 and i == 21:
+                        plt.subplot(prows, 20, index) 
+                        plt.axis('off')
+                        plt.savefig(path+'pruned_ranking.png', dpi=100, pad_inches=0)
+
+                        plt.imshow(localFS[newListFS[i]][ :, :],cmap='Oranges')   # Blues    Oranges
+
+                    index += 20
+
+                index_orig += 1
 
 
     #画baseline model 的weight 和FS train model 的weight 的stripe 分布图，论文中 Figure 4 的右边图

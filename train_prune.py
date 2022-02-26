@@ -282,9 +282,11 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
            plots=plots and final_epoch,
            callbacks=callbacks,
            compute_loss=compute_loss)
-
+    
     print_model_param_nums(model)
     count_model_param_flops(model)
+
+
     # model.info(img_size=640)   # yolo 官方方法计算flops
     # model_info_simple(model)   # 自己改动的yolo 官方方法计算flops
     if opt.Mobilenet is not None:
@@ -497,7 +499,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 def parse_opt(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='yolov5s.pt', help='initial weights path')
-    parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
+    parser.add_argument('--cfg', type=str, default='yolov5s.yaml', help='model.yaml path')
     parser.add_argument('--data', type=str, default='data/coco128.yaml', help='dataset.yaml path')
     parser.add_argument('--hyp', type=str, default='data/hyps/hyp.scratch.yaml', help='hyperparameters path')
     parser.add_argument('--epochs', type=int, default=300)
@@ -536,6 +538,8 @@ def parse_opt(known=False):
     parser.add_argument('--threshold', type=float)
     parser.add_argument('--Mobilenet', default=None)
     #-------------------------------------------------------------------------------------------------------------------------
+    # parser.parse_args(
+    #     ['--data', 'voc.yaml', '--cfg', 'yolov5s_test.yaml',  '--batch-size', 80, '--sr', 0.99, '--threshold', 0.8, '--epochs', 1])
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
     return opt
 
